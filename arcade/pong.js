@@ -63,7 +63,7 @@ function moveBall() {
         resetBall();
     }
 
-    ball.style
+    // Ball position will be updated in the main game loop
 }
 
 function resetBall() {
