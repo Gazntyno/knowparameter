@@ -35,11 +35,26 @@ nav ul li a{
 .container-1 {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
+    gap: 10px;
     grid-template-areas:
+    ". gear . "
     ". art . "
     ". blog . ";
     grid: 10px;
+}
+
+.gear {
+    grid-area: gear;
+    background: #00000041;
+    margin: 1em;
+    padding:1em;
+    text-align: center;
+    color: white;
+    border-color: #ffffff77;
+    border-style: solid;
+    width: 500px;
+    height: 200px;
 }
 
 .art {
