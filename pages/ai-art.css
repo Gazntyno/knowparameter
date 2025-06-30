@@ -1,0 +1,82 @@
+/* ai-art.css */
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #080808;
+  color: #ffffff;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1em 2em;
+  background: rgba(8, 8, 8, 0.7);
+}
+
+.logo img {
+  height: 50px;
+}
+
+nav a {
+  color: #ffffff;
+  text-decoration: none;
+  margin-left: 1em;
+  padding: 0.5em 0.75em;
+  border-radius: 4px;
+  transition: background 0.3s;
+}
+
+nav a:hover,
+nav a.active {
+  background: #1f1f1f;
+}
+
+main {
+  padding-bottom: 2em;
+}
+
+/* Intro paragraph styling */
+.intro .container {
+  max-width: 800px;
+  margin: 2em auto;
+  text-align: center;
+  line-height: 1.6;
+  font-size: 1.1rem;
+  color: #e2e2e2;
+}
+
+/* Gallery grid */
+.gallery {
+  padding: 0 2em;
+}
+
+.gallery-container {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1em;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.art-block {
+  background: #27272746;
+  border: 1px solid #333;
+  border-radius: 6px;
+  aspect-ratio: 1 / 1;
+  /* center a placeholder icon/text if you like */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #777;
+  font-size: 0.9rem;
+}
+
+/* Footer */
+footer {
+  background: #00000046;
+  text-align: center;
+  padding: 1em 0;
+  color: #ccc;
+}
