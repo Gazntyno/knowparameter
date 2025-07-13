@@ -1,0 +1,106 @@
+/* Full‑screen Three.js canvas behind everything */
+body, html {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+#three-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+}
+
+/* Particle containers over HUD elements */
+#hud-particles,
+#cursor-particles {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9;
+}
+/* HUD covers full screen for absolute positioning */
+#hud {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Common widget styles */
+.widget {
+  position: absolute;
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.7);
+  color: #28a745;
+  border: 3px solid #28a745;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Press Start 2P', sans-serif;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: transform .2s, background .2s;
+  animation: float 20s ease-in-out infinite;
+}
+.widget:hover {
+  transform: scale(1.1);
+  background: rgba(40, 167, 69, 0.2);
+}
+
+@keyframes float {
+  0% { transform: translate(0, 0); }
+  50% { transform: translate(var(--float-x, 20px), var(--float-y, 20px)); }
+  100% { transform: translate(0, 0); }
+}
+
+/* Distribute widgets around the screen with custom float offsets */
+#home-btn {
+  top: 5%;
+  left: 5%;
+  --float-x: 25px;
+  --float-y: -15px;
+}
+#shop-btn {
+  top: 5%;
+  left: 50%;
+  transform: translateX(-50%);
+  --float-x: -30px;
+  --float-y: 20px;
+}
+#blog-btn {
+  top: 5%;
+  right: 5%;
+  --float-x: 20px;
+  --float-y: 25px;
+}
+#gallery-btn {
+  bottom: 5%;
+  left: 5%;
+  --float-x: -30px;
+  --float-y: -20px;
+}
+#twitter-btn {
+  bottom: 2%;
+  left: 50%;
+  transform: translateX(-50%);
+  --float-x: -20px;
+  --float-y: -25px;
+}
+#login-btn {
+  bottom: 5%;
+  right: 5%;
+  --float-x: 30px;
+  --float-y: -20px;
+}
