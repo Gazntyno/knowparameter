@@ -1,33 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Game‑Style Site</title>
-  <link rel="stylesheet" href="HUD.css">
-</head>
-<body>
-  <!-- 1) Three.js canvas -->
-  <canvas id="three-canvas"></canvas>
+  <head>
+    <meta charset="UTF-8" />
+    <title>know parameter</title>
+    <link rel="stylesheet" href="HUD.css" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
+    />
+  </head>
+  <body>
+    <!-- 1) Three.js canvas -->
+    <canvas id="three-canvas"></canvas>
 
-  <!-- 2) Particle overlays -->
-  <div id="hud-particles"></div>
-  <div id="cursor-particles"></div>
+    <!-- 2) Particle overlays -->
+    <div id="hud-particles"></div>
+    <div id="cursor-particles"></div>
 
-  <!-- 3) HUD overlay (shop, blog, social, login) -->
-  <div id="hud">
-    <button class="widget" id="home-btn">Home</button>
-    <button class="widget" id="shop-btn">Shop</button>
-    <button class="widget" id="blog-btn">Blog</button>
-     <button class="widget" id="gallery-btn">Gallery</button>
-    <a class="widget" id="twitter-btn" href="https://twitter.com/gazntyno" target="_blank"> X</a>
-    <button class="widget" id="login-btn">Login</button>
-  </div>
+    <!-- 3) HUD overlay (shop, blog, social, login) -->
+    <div id="hud">
+      <button class="widget" id="logo-btn">
+        <span class="material-symbols-outlined"> hand_bones </span>
+      </button>
+      <button class="widget" id="shop-btn">
+        <span class="material-symbols-outlined"> attach_money </span>
+      </button>
+      <button class="widget" id="media-btn">
+        <span class="material-symbols-outlined"> stock_media </span>
+      </button>
+      <button class="widget" id="arcade-btn">
+        <span class="material-symbols-outlined"> joystick </span>
+      </button>
+      <a class="widget" id="control-btn">
+        <span class="material-symbols-outlined"> switch_access </span></a
+      >
+      <button class="widget" id="login-btn">
+        <span class="material-symbols-outlined"> person </span>
+      </button>
+    </div>
 
-  <!-- Three.js core -->
-  <script type="module" src="/three.js-master/build/three.module.js"></script>
-  <!-- tsParticles for particle effects -->
-  <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.9.3/tsparticles.bundle.min.js"></script>
-  <!-- Your HUD and particles logic -->
-  <script type="module" src="HUD.js"></script>
-</body>
+    <div id="button-particles"></div>
+
+    <!-- Three.js core -->
+    <script
+      type="module"
+      src="/three.js-master/three.js-master/build/three.module.js"
+    ></script>
+    <!-- tsParticles for particle effects -->
+    <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.9.3/tsparticles.bundle.min.js"></script>
+    <!-- Your HUD and particles logic -->
+    <script type="module" src="HUD.js"></script>
+  </body>
 </html>
