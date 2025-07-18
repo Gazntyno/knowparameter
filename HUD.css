@@ -5,6 +5,7 @@ html {
   padding: 0;
   overflow: hidden;
 }
+
 #three-canvas {
   position: fixed;
   top: 0;
@@ -98,6 +99,22 @@ html {
   display: flex;
   align-items: center;
   justify-content: center;
+  
+}
+#logo-btn .logo-icon {
+  width: 100%; /* scale to taste */
+  height: auto; /* preserve aspect ratio */
+  pointer-events: none; /* clicks go to the button */
+  display: block;
+   /* ↓ add a filter to tint the PNG: */
+  filter:
+    /* remove all color */
+    grayscale(1)
+    /* darken it */
+    brightness(0.5)
+    /* add your hue/saturation */
+    sepia(1.4) saturate(2.4) hue-rotate(432deg);
+  
 }
 #shop-btn {
   top: 5%;
@@ -158,8 +175,8 @@ html {
 /* Sub-node styles for hover menus */
 .sub-node {
   position: absolute;
-  width: 104px;
-  height: 104px;
+  width: 124px;
+  height: 124px;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.7);
   border: 2px solid #28a745;
@@ -179,6 +196,34 @@ html {
     var(--node-squish-delay, 3s);
 }
 
+.widget,
+.sub-node {
+  position: absolute;
+  will-change: transform;
+  pointer-events: auto;
+}
+/* HUD.css */
+/* … your existing rules … */
+
+/* make nodes pop when hovered/clicked */
+.sub-node {
+  transition: transform 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+
+  cursor: pointer;
+}
+.sub-node:hover {
+  transform: scale(1.2);
+  background: rgba(40, 167, 69, 0.9);
+}
+
+/* example: style nodes by type via data-type */
+/*.sub-node[data-type="store"] {
+  
+}
+.sub-node[data-type="donate"] {
+  
+}*/
+
 #button-particles {
   position: fixed;
   top: 0;
@@ -192,9 +237,14 @@ html {
 /* target all icons inside your widgets */
 .widget .material-symbols-outlined {
   /* make the icon roughly 100 px tall (adjust up or down to taste) */
-  font-size: 4rem; /* 6rem × 16px = 96px */
+  font-size: 5.4rem; /* 6rem × 16px = 96px */
   line-height: 1;
 
   /* optional: bump the variable-font optical size up too */
   font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 48; /* typical opsz value for compatibility */
+}
+
+.sub-node .material-symbols-outlined {
+  font-size: 3rem; /* tweak this value as needed */
+  font-variation-settings: "FILL" 0, "wght" 300, "GRAD" 0, "opsz" 24;
 }
