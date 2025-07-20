@@ -191,7 +191,7 @@ html {
   transition: transform 0.3s ease-out, opacity 0.3s ease-out;
   transform: translate(0, 0);
   opacity: 0;
-  z-index: 12; /* above HUD */
+  z-index: 11; /* above HUD */
   animation: squish var(--node-squish-dur, 14s) ease-in-out infinite
     var(--node-squish-delay, 3s);
 }
@@ -231,7 +231,7 @@ html {
   width: 100vw;
   height: 100vh;
   pointer-events: none;
-  z-index: 15;
+  z-index: 12;
 }
 
 /* target all icons inside your widgets */

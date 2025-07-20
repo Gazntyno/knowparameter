@@ -7,8 +7,57 @@ engine.world.gravity.y = 0;
 const runner = Runner.create();
 Runner.run(runner, engine);
 
+const hudEl = document.getElementById("hud");
+const hudRect = hudEl.getBoundingClientRect();
+
+// thin but tall walls:
+const wallThickness = 10;
+const wallOpts = {
+  isStatic: true,
+  restitution: 1, // full bounce
+  friction: 0,
+  frictionAir: 0,
+};
+
+function createWalls() {
+  const { left, top, width, height } = hudEl.getBoundingClientRect();
+  return [
+    Bodies.rectangle(
+      left - wallThickness / 2,
+      top + height / 2,
+      wallThickness,
+      height,
+      wallOpts
+    ),
+    Bodies.rectangle(
+      left + width + wallThickness / 2,
+      top + height / 2,
+      wallThickness,
+      height,
+      wallOpts
+    ),
+    Bodies.rectangle(
+      left + width / 2,
+      top - wallThickness / 2,
+      width,
+      wallThickness,
+      wallOpts
+    ),
+    Bodies.rectangle(
+      left + width / 2,
+      top + height + wallThickness / 2,
+      width,
+      wallThickness,
+      wallOpts
+    ),
+  ];
+}
+let walls = createWalls();
+World.add(world, walls);
+
 // keep track of dynamic node bodies
 const dynamicNodes = [];
+const buttonBodies = {};
 
 // === Three.js Setup ===
 const scene = new THREE.Scene();
@@ -24,29 +73,16 @@ const renderer = new THREE.WebGLRenderer({
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
 camera.position.set(0, 2, 5);
+window.addEventListener("resize", () => {
+  World.remove(world, walls);
+  walls = createWalls();
+  World.add(world, walls);
 
-// create static bodies for buttons
-document.querySelectorAll(".widget").forEach((btn) => {
-  const rect = btn.getBoundingClientRect();
-  const radius = rect.width / 2;
-  const body = Bodies.circle(rect.left + radius, rect.top + radius, radius, {
-    isStatic: true,
-    restitution: 0.7,
-  });
-  World.add(engine.world, body);
+  // update Three.js camera & renderer
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
 });
-
-// helper to register a node's physics body
-function Node(el) {
-  const pr = el.getBoundingClientRect();
-  const r = pr.width / 2;
-  const body = Bodies.circle(pr.left + r, pr.top + r, r, {
-    restitution: 0.8,
-    frictionAir: 0.02,
-  });
-  World.add(engine.world, body);
-  dynamicNodes.push({ el, body });
-}
 
 // register physics body
 function registerNode(el, x, y) {
@@ -61,6 +97,15 @@ function registerNode(el, x, y) {
 // sync physics positions → DOM transforms
 
 function targetFrame() {
+  Object.entries(buttonBodies).forEach(([id, body]) => {
+    const btn = document.getElementById(id);
+    const r = btn.getBoundingClientRect();
+    Matter.Body.setPosition(body, {
+      x: r.left + r.width / 2,
+      y: r.top + r.height / 2,
+    });
+  });
+
   dynamicNodes.forEach(({ el, body }) => {
     const parentRect = el.parentElement.getBoundingClientRect();
     const x = body.position.x - parentRect.left - el.offsetWidth / 2;
@@ -70,6 +115,28 @@ function targetFrame() {
   requestAnimationFrame(targetFrame);
 }
 targetFrame();
+
+const PROXIMITY_RADIUS = 140;
+function isWithinRadius(rect, x, y) {
+  const dx = Math.max(rect.left - x, 0, x - rect.right);
+  const dy = Math.max(rect.top - y, 0, y - rect.bottom);
+  return dx * dx + dy * dy <= PROXIMITY_RADIUS * PROXIMITY_RADIUS;
+}
+function startProximityCheck(btn) {
+  if (btn._proximityListener) return;
+  const listener = (e) => {
+    const { clientX: x, clientY: y } = e;
+    if (isWithinRadius(btn.getBoundingClientRect(), x, y)) return;
+    for (const node of btn._subNodes) {
+      if (isWithinRadius(node.getBoundingClientRect(), x, y)) return;
+    }
+    btn.removeNodes();
+    document.removeEventListener("mousemove", listener);
+    delete btn._proximityListener;
+  };
+  btn._proximityListener = listener;
+  document.addEventListener("mousemove", listener);
+}
 // 2) Customize distances: per-button arrays or random range
 //    array => exact distances per index
 //    object => {min, max} random between
@@ -93,7 +160,7 @@ const nodeConfigs = {
     },
     {
       icon: "store",
-      label: "storefront",
+      label: "store",
       type: "store",
       onClick: () => console.log("loading store"),
     },
@@ -127,13 +194,13 @@ const nodeConfigs = {
   "arcade-btn": [
     {
       icon: "sports_esports",
-      label: "games",
+      label: "arcade",
       type: "games",
       onClick: () => console.log("game selection"),
     },
     {
       icon: "experiment",
-      label: "lab",
+      label: "demo lab",
       type: "lab",
       onClick: () => console.log("demo lab"),
     },
@@ -266,7 +333,6 @@ window.tsParticles.load("cursor-particles", {
 
 // Updated function to include buttons + sub-nodes
 // === Button grab-lines setup ===
-const buttonEls = document.querySelectorAll("#hud .widget");
 
 function collectGrabTargets() {
   const manual = [];
@@ -301,10 +367,6 @@ function collectGrabTargets() {
   console.log("Grab targets:", manual);
   return manual;
 }
-
-buttonEls.forEach((btn) => (btn.style.position = "relative"));
-// === Hover sub-node effect ===
-const hoverDistance = 140;
 const separationAngle = Math.PI / 16; // 30° separation
 const jitterAngle = Math.PI / 8; // ±10° jitter around each slot
 const baseAngles = {
@@ -315,144 +377,152 @@ const baseAngles = {
   "logo-btn": Math.PI / 1.7,
 };
 
-const buttonBodies = {};
+const buttonEls = document.querySelectorAll("#hud .widget");
 buttonEls.forEach((btn) => {
-  let subNodes = [];
-  const configs = nodeConfigs[btn.id] || [];
+  btn.style.position = "relative";
+  btn._subNodes = [];
+  btn._toggled = false;
+
+  // physics body for the button
   const rect = btn.getBoundingClientRect();
   const radius = rect.width / 2;
   const body = Bodies.circle(rect.left + radius, rect.top + radius, radius, {
     isStatic: true,
-    inertia: Infinity, // prevents rotation
-    frictionAir: 0.02, // tiny damping
+    inertia: Infinity,
+    frictionAir: 0.02,
   });
-  World.add(engine.world, body);
+  World.add(world, body);
   buttonBodies[btn.id] = body;
 
-  btn._toggled = false; // track each button’s toggle state
-  btn.spawnNodes = spawnNodes; // expose spawnNodes
-  btn.removeNodes = removeNodes; // expose removeNodes
-
-  function spawnNodes() {
-    if (subNodes.length > 0) return;
-
-    const rect = btn.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
+  // spawn & remove using btn._subNodes
+  btn.spawnNodes = function () {
+    if (this._subNodes.length) return this._subNodes;
+    const rect = this.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
     const screenCX = window.innerWidth / 2;
     const screenCY = window.innerHeight / 2;
-    const dxFull = screenCX - centerX;
-    const dyFull = screenCY - centerY;
-    const fullDist = Math.hypot(dxFull, dyFull);
-
-    const buttonRadius = rect.width / 2;
-    const nodeRadius = 124 / 2; // match your CSS .sub-node width:124px
-    const margin = buttonRadius + nodeRadius;
-    const maxDist = Math.max(0, fullDist - margin);
-
-    const baseAngle =
-      baseAngles[btn.id] !== undefined
-        ? baseAngles[btn.id]
-        : Math.atan2(screenCY - centerY, screenCX - centerX);
-
+    const fullDist = Math.hypot(screenCX - cx, screenCY - cy);
+    const buttonRad = rect.width / 2;
+    const nodeRad = 124 / 2;
+    const maxDist = Math.max(0, fullDist - (buttonRad + nodeRad));
+    const angle0 =
+      baseAngles[this.id] ?? Math.atan2(screenCY - cy, screenCX - cx);
+    const configs = nodeConfigs[this.id] || [];
     configs.forEach((cfg, i) => {
-      // ── 1) compute the proper distance PER NODE ──
       let dist;
-      const distCfg = customDistances[btn.id];
-      if (Array.isArray(distCfg)) {
-        dist = distCfg[i];
-      } else if (distCfg) {
-        dist = distCfg.min + Math.random() * (distCfg.max - distCfg.min);
-      } else {
-        // evenly space nodes along the inward ray:
-        // (i+1)/(N+1) gives fractions: e.g. 1/4, 2/4, 3/4 for N=3
-        const N = configs.length;
-        dist = ((i + 1) / (N + 1)) * maxDist;
-      }
+      const dCfg = customDistances[this.id];
+      if (Array.isArray(dCfg)) dist = dCfg[i];
+      else if (dCfg) dist = dCfg.min + Math.random() * (dCfg.max - dCfg.min);
+      else dist = ((i + 1) / (configs.length + 1)) * maxDist;
+      const slot = (i - (configs.length - 1) / 2) * separationAngle;
+      const jit = (Math.random() * 2 - 1) * jitterAngle;
+      const angle = angle0 + slot + jit;
+      const rawX = Math.cos(angle) * dist;
+      const rawY = Math.sin(angle) * dist;
+      const clX = Math.min(
+        Math.max(rawX, nodeRad - cx),
+        window.innerWidth - nodeRad - cx
+      );
+      const clY = Math.min(
+        Math.max(rawY, nodeRad - cy),
+        window.innerHeight - nodeRad - cy
+      );
+      const spawnX = cx + clX;
+      const spawnY = cy + clY;
 
-      // ── 2) spread & jitter ──
-      const slotOffset = (i - (configs.length - 1) / 2) * separationAngle;
-      const randJitter = (Math.random() * 2 - 1) * jitterAngle;
-      const angle = baseAngle + slotOffset + randJitter;
-
-      // ── 3) final offsets ──
-      const offsetX = Math.cos(angle) * dist;
-      const offsetY = Math.sin(angle) * dist;
-
-      // ── 4) create the DOM node ──
       const node = document.createElement("button");
       node.className = "sub-node";
-
       node.title = cfg.label;
       node.dataset.type = cfg.type;
-      const iconSpan = document.createElement("span");
-      iconSpan.className = "material-symbols-outlined";
-      iconSpan.textContent = cfg.icon;
-
-      node.appendChild(iconSpan);
+      const icon = document.createElement("span");
+      icon.className = "material-symbols-outlined";
+      icon.textContent = cfg.icon;
+      node.appendChild(icon);
       node.addEventListener("click", (e) => {
         e.stopPropagation();
         cfg.onClick(e, node, btn);
       });
 
-      // ── 5) position & add to DOM ──
       node.style.left = `${rect.width / 2 - node.offsetWidth / 2}px`;
       node.style.top = `${rect.height / 2 - node.offsetHeight / 2}px`;
-      btn.appendChild(node);
-
-      // ── 6) register physics body exactly at spawn point ──
-      const spawnX = centerX + offsetX;
-      const spawnY = centerY + offsetY;
+      this.appendChild(node);
       registerNode(node, spawnX, spawnY);
-
-      // ── 7) kick off your CSS “fly-out” animation ──
       requestAnimationFrame(() => {
-        node.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+        node.style.transform = `translate(${clX}px, ${clY}px)`;
         node.style.opacity = "1";
       });
-
-      subNodes.push(node);
+      this._subNodes.push(node);
     });
-  }
+    return this._subNodes;
+  };
 
-  function removeNodes() {
-    subNodes.forEach((node) => {
+  btn.removeNodes = function () {
+    this._subNodes.forEach((node) => {
       const idx = dynamicNodes.findIndex((n) => n.el === node);
       if (idx !== -1) {
-        World.remove(engine.world, dynamicNodes[idx].body);
+        World.remove(world, dynamicNodes[idx].body);
         dynamicNodes.splice(idx, 1);
       }
-
       node.style.transform = "translate(0,0)";
       node.style.opacity = "0";
       node.addEventListener("transitionend", () => node.remove(), {
         once: true,
       });
     });
-    subNodes = [];
-  }
+    this._subNodes = [];
+  };
 
-  // hover only if not toggled on
   btn.addEventListener("mouseenter", () => {
-    if (!btn._toggled && subNodes.length === 0) spawnNodes();
-  });
-  btn.addEventListener("mouseleave", () => {
-    if (!btn._toggled) removeNodes();
-  });
-
-  // single click handler, toggles on/off
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    if (btn._toggled) {
-      removeNodes();
-    } else {
-      spawnNodes();
+    if (!btn._toggled && btn._subNodes.length === 0) {
+      btn.spawnNodes();
+      startProximityCheck(btn);
     }
-    btn._toggled = !btn._toggled;
   });
+  /*btn.addEventListener("mouseleave", (e) => {
+    if (!btn._toggled && !btn.contains(e.relatedTarget)) {
+      btn.removeNodes();
+      if (btn._proximityListener) {
+        document.removeEventListener("mousemove", btn._proximityListener);
+        delete btn._proximityListener;
+      }
+    }
+  });*/
+  btn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  btn._toggled = !btn._toggled;
+
+  if (btn._toggled) {
+    // ON: spawn nodes…
+    btn.spawnNodes();
+
+    // …and remove any hover-proximity watcher so they never auto-tear
+    if (btn._proximityListener) {
+      document.removeEventListener("mousemove", btn._proximityListener);
+      delete btn._proximityListener;
+    }
+  } else {
+    // OFF: teardown exactly as before
+    if (btn._proximityListener) {
+      document.removeEventListener("mousemove", btn._proximityListener);
+      delete btn._proximityListener;
+    }
+    btn.removeNodes();
+  }
+});
 });
 
-// 2) After the buttonEls.forEach(…) block, add:
+// === Random animation timings ===
+document.querySelectorAll(".widget").forEach((btn) => {
+  const fDur = (8 + Math.random() * 3).toFixed(1) + "s";
+  const fDelay = (Math.random() * 4).toFixed(1) + "s";
+  const sDur = (4 + Math.random() * 16).toFixed(1) + "s";
+  const sDelay = (Math.random() * 1).toFixed(1) + "s";
+  btn.style.setProperty("--float-dur", fDur);
+  btn.style.setProperty("--float-delay", fDelay);
+  btn.style.setProperty("--squish-dur", sDur);
+  btn.style.setProperty("--squish-delay", sDelay);
+});
 
 const controlBtn = document.getElementById("control-btn");
 let allToggled = false;
@@ -485,22 +555,4 @@ document.querySelectorAll(".widget").forEach((btn) => {
   btn.style.setProperty("--float-delay", fDelay);
   btn.style.setProperty("--squish-dur", sDur);
   btn.style.setProperty("--squish-delay", sDelay);
-
-  // (optional) pick from multiple keyframes if you want truly different shapes:
-  // const variant = Math.ceil(Math.random()*3);
-  // btn.classList.add(`squish-variant-${variant}`);
 });
-
-/* 6) BONUS: Cursor‐pet in 3D space */
-// raycaster & sprite or small 3D model following mouse...
-// import { Raycaster, Vector2, SpriteMaterial, Sprite } from 'three';
-// let raycaster = new THREE.Raycaster();
-// let mouse     = new THREE.Vector2();
-// window.addEventListener('mousemove', e => {
-//   mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-//   mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-// });
-// // create a Sprite or small mesh, and in animate():
-// // raycaster.setFromCamera(mouse, camera);
-// // const intersects = raycaster.intersectObject(yourGroundPlane);
-// // if (intersects[0]) pet.position.copy(intersects[0].point);
